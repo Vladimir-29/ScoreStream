@@ -1,4 +1,4 @@
-// Package config loads application configuration from environment variables.
+// Package config загружает конфигурацию приложения из переменных окружения.
 package config
 
 import (
@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Config holds the configuration shared by the API and worker binaries.
+// Config хранит конфигурацию, общую для бинарников API и worker.
 type Config struct {
 	HTTPAddr     string
 	KafkaBrokers []string
@@ -22,9 +22,9 @@ func env(key, fallback string) string {
 	return fallback
 }
 
-// Load reads configuration from the environment, using local development
-// defaults when variables are unset. It returns an error if a required
-// value ends up empty.
+// Load читает конфигурацию из окружения, используя значения по умолчанию
+// для локальной разработки, если переменные не заданы. Возвращает ошибку,
+// если обязательное значение в итоге пустое.
 func Load() (Config, error) {
 	cfg := Config{
 		HTTPAddr:     env("HTTP_ADDR", ":8080"),

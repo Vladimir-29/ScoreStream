@@ -1,6 +1,7 @@
 package score
 
 import (
+	"encoding/json"
 	"testing"
 )
 
@@ -51,39 +52,25 @@ func TestKey(t *testing.T) {
 	}
 }
 
-func TestMarshalUnmarshalRoundTrip(t *testing.T) {
+func TestEventJSON(t *testing.T) {
 	e := validEvent()
-	data, err := e.Marshal()
+
+	data, err := json.Marshal(e)
 	if err != nil {
-		t.Fatalf("Marshal() = %v", err)
+		t.Fatalf("json.Marshal() = %v", err)
 	}
+
 	want := `{"event_id":"evt-1","leaderboard_id":"weekly","user_id":"user-1","points":100}`
 	if string(data) != want {
-		t.Fatalf("Marshal() = %s, want %s", data, want)
+		t.Fatalf("JSON = %s, want %s", data, want)
 	}
-	got, err := Unmarshal(data)
-	if err != nil {
-		t.Fatalf("Unmarshal() = %v", err)
+
+	var got Event
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("json.Unmarshal() = %v", err)
 	}
+
 	if got != e {
 		t.Fatalf("round trip = %+v, want %+v", got, e)
-	}
-}
-
-func TestUnmarshal_InvalidJSON(t *testing.T) {
-	if _, err := Unmarshal([]byte("{bad")); err == nil {
-		t.Fatal("Unmarshal() with invalid JSON = nil error, want error")
-	}
-}
-
-func TestUnmarshal_PointsAsInt64(t *testing.T) {
-	// points must deserialize into int64, not float64.
-	data := []byte(`{"event_id":"e","leaderboard_id":"l","user_id":"u","points":9223372036854775807}`)
-	e, err := Unmarshal(data)
-	if err != nil {
-		t.Fatalf("Unmarshal() = %v", err)
-	}
-	if e.Points != 9223372036854775807 {
-		t.Fatalf("Points = %d, want MaxInt64", e.Points)
 	}
 }

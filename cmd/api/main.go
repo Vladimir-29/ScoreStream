@@ -1,4 +1,4 @@
-// Command api runs the ScoreStream REST API and Kafka producer.
+// Command api запускает REST API ScoreStream и продюсер Kafka.
 package main
 
 import (

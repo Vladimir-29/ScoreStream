@@ -1,13 +1,12 @@
-// Package score defines the score event shared by the API and the worker.
+// Package score определяет событие очков, общее для API и worker.
 package score
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 )
 
-// Event is the payload published to the score-events Kafka topic.
+// Event — полезная нагрузка, публикуемая в топик Kafka score-events.
 type Event struct {
 	EventID       string `json:"event_id"`
 	LeaderboardID string `json:"leaderboard_id"`
@@ -15,13 +14,13 @@ type Event struct {
 	Points        int64  `json:"points"`
 }
 
-// Key returns the Kafka message key used to partition events for a
-// leaderboard/user pair to the same partition.
+// Key возвращает ключ сообщения Kafka, по которому события пары
+// «лидерборд/пользователь» попадают в один раздел.
 func (e Event) Key() string {
 	return e.LeaderboardID + ":" + e.UserID
 }
 
-// Validate checks that all required fields are present and points is positive.
+// Validate проверяет, что все обязательные поля заполнены, а points положителен.
 func (e Event) Validate() error {
 	if e.EventID == "" {
 		return errors.New("event_id is required")
@@ -36,18 +35,4 @@ func (e Event) Validate() error {
 		return fmt.Errorf("points must be a positive integer, got %d", e.Points)
 	}
 	return nil
-}
-
-// Marshal serializes the event as JSON.
-func (e Event) Marshal() ([]byte, error) {
-	return json.Marshal(e)
-}
-
-// Unmarshal parses a JSON-encoded score event.
-func Unmarshal(data []byte) (Event, error) {
-	var e Event
-	if err := json.Unmarshal(data, &e); err != nil {
-		return Event{}, err
-	}
-	return e, nil
 }

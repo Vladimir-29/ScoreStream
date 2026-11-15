@@ -1,4 +1,4 @@
-// Command worker consumes score events from Kafka and logs them.
+// Command worker потребляет события очков из Kafka и записывает их в лог.
 package main
 
 import (

@@ -1,4 +1,4 @@
-// Package kafka contains the franz-go based producer and consumer.
+// Package kafka содержит продюсер и потребителя на основе franz-go.
 package kafka
 
 import (
@@ -8,21 +8,21 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
-// Producer publishes score events to Kafka.
+// Producer публикует события очков в Kafka.
 type Producer struct {
 	client *kgo.Client
 	topic  string
 }
 
-// NewProducer creates a Kafka producer for the given brokers and topic.
-// Publication requires acknowledgement from all in-sync replicas and uses
-// producer idempotence.
+// NewProducer создаёт продюсер Kafka для заданных брокеров и топика.
+// Публикация требует подтверждения от всех синхронных реплик и использует
+// идемпотентность продюсера.
 func NewProducer(brokers []string, topic string) (*Producer, error) {
 	client, err := kgo.NewClient(
 		kgo.SeedBrokers(brokers...),
 		kgo.DefaultProduceTopic(topic),
 		kgo.RequiredAcks(kgo.AllISRAcks()),
-		kgo.ProducerBatchMaxBytes(1<<20), // 1 MiB
+		kgo.ProducerBatchMaxBytes(1<<20), // 1 МиБ
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create kafka producer: %w", err)
@@ -30,12 +30,10 @@ func NewProducer(brokers []string, topic string) (*Producer, error) {
 	return &Producer{client: client, topic: topic}, nil
 }
 
-// Publish sends key/value to the topic and waits for the broker
-// acknowledgement. It returns an error if publication fails or the
-// context is cancelled.
+// Publish отправляет key/value в топик и ждёт подтверждения от брокера.
+// Возвращает ошибку, если публикация не удалась или контекст отменён.
 func (p *Producer) Publish(ctx context.Context, key string, value []byte) error {
 	results := p.client.ProduceSync(ctx, &kgo.Record{
-		Topic: p.topic,
 		Key:   []byte(key),
 		Value: value,
 	})
@@ -45,7 +43,7 @@ func (p *Producer) Publish(ctx context.Context, key string, value []byte) error 
 	return nil
 }
 
-// Close shuts down the producer and flushes pending records.
+// Close завершает работу продюсера и сбрасывает ожидающие записи.
 func (p *Producer) Close() {
 	p.client.Close()
 }

@@ -7,14 +7,14 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
-// Consumer consumes score events from Kafka as part of a consumer group.
+// Consumer потребляет события очков из Kafka в составе группы потребителей.
 type Consumer struct {
 	client *kgo.Client
 }
 
-// NewConsumer creates a Kafka consumer subscribed to topic within the
-// given consumer group. Automatic offset commits are disabled; offsets are
-// committed explicitly via Commit.
+// NewConsumer создаёт потребителя Kafka, подписанного на topic в заданной
+// группе потребителей. Автоматический коммит офсетов отключён; офсеты
+// коммитятся явно через Commit.
 func NewConsumer(brokers []string, topic, groupID string) (*Consumer, error) {
 	client, err := kgo.NewClient(
 		kgo.SeedBrokers(brokers...),
@@ -28,14 +28,14 @@ func NewConsumer(brokers []string, topic, groupID string) (*Consumer, error) {
 	return &Consumer{client: client}, nil
 }
 
-// PollFetches waits for and returns the next batch of fetched records.
-// It blocks until records are available or ctx is done.
+// PollFetches ждёт и возвращает следующую пачку полученных записей.
+// Блокируется до появления записей или завершения ctx.
 func (c *Consumer) PollFetches(ctx context.Context) kgo.Fetches {
 	return c.client.PollFetches(ctx)
 }
 
-// Commit marks the record's offset as committed. Only call this after the
-// record has been processed successfully.
+// Commit помечает офсет записи как закоммиченный. Вызывать следует только
+// после успешной обработки записи.
 func (c *Consumer) Commit(ctx context.Context, rec *kgo.Record) error {
 	if err := c.client.CommitRecords(ctx, rec); err != nil {
 		return fmt.Errorf("commit offset for %s:%d@%d: %w",
@@ -44,7 +44,7 @@ func (c *Consumer) Commit(ctx context.Context, rec *kgo.Record) error {
 	return nil
 }
 
-// Close leaves the consumer group and shuts down the client.
+// Close покидает группу потребителей и завершает работу клиента.
 func (c *Consumer) Close() {
 	c.client.Close()
 }
