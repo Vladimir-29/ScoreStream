@@ -26,5 +26,24 @@ services:
       retries: 10
       start_period: 20s
 
+  postgres:
+    image: postgres:17.6
+    container_name: scorestream-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: scorestream
+      POSTGRES_USER: scorestream
+      POSTGRES_PASSWORD: scorestream
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scorestream -d scorestream"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
 volumes:
   kafka-data:
+  postgres-data:

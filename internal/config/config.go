@@ -10,6 +10,7 @@ import (
 // Config хранит конфигурацию, общую для бинарников API и worker.
 type Config struct {
 	HTTPAddr     string
+	DatabaseURL  string
 	KafkaBrokers []string
 	KafkaTopic   string
 	KafkaGroupID string
@@ -28,12 +29,16 @@ func env(key, fallback string) string {
 func Load() (Config, error) {
 	cfg := Config{
 		HTTPAddr:     env("HTTP_ADDR", ":8080"),
+		DatabaseURL:  env("DATABASE_URL", "postgres://scorestream:scorestream@localhost:5432/scorestream?sslmode=disable"),
 		KafkaBrokers: strings.Split(env("KAFKA_BROKERS", "localhost:9092"), ","),
 		KafkaTopic:   env("KAFKA_TOPIC", "score-events"),
 		KafkaGroupID: env("KAFKA_GROUP_ID", "scorestream-workers"),
 	}
 	if cfg.HTTPAddr == "" {
 		return Config{}, fmt.Errorf("HTTP_ADDR must not be empty")
+	}
+	if cfg.DatabaseURL == "" {
+		return Config{}, fmt.Errorf("DATABASE_URL must not be empty")
 	}
 	if len(cfg.KafkaBrokers) == 0 {
 		return Config{}, fmt.Errorf("KAFKA_BROKERS must not be empty")

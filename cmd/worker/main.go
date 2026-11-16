@@ -1,9 +1,11 @@
-// Command worker потребляет события очков из Kafka и записывает их в лог.
+// Command worker потребляет события очков из Kafka, сохраняет их в
+// PostgreSQL и подтверждает обработанные offset-ы.
 package main
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/Vladimir-29/ScoreStream/internal/config"
 	"github.com/Vladimir-29/ScoreStream/internal/kafka"
+	"github.com/Vladimir-29/ScoreStream/internal/postgres"
 	"github.com/Vladimir-29/ScoreStream/internal/score"
 	"github.com/twmb/franz-go/pkg/kgo"
 )
@@ -40,6 +43,12 @@ func run(logger *slog.Logger) error {
 		syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	store, err := postgres.NewStore(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+
 	logger.Info("worker started",
 		"brokers", cfg.KafkaBrokers,
 		"topic", cfg.KafkaTopic,
@@ -58,7 +67,7 @@ func run(logger *slog.Logger) error {
 		}
 
 		for _, rec := range fetches.Records() {
-			if err := processRecord(ctx, consumer, logger, rec); err != nil {
+			if err := processRecord(ctx, consumer, store, logger, rec); err != nil {
 				return fmt.Errorf("process record at %s:%d@%d: %w",
 					rec.Topic, rec.Partition, rec.Offset, err)
 			}
@@ -67,17 +76,40 @@ func run(logger *slog.Logger) error {
 }
 
 func processRecord(ctx context.Context, consumer *kafka.Consumer,
-	logger *slog.Logger, rec *kgo.Record) error {
+	store *postgres.Store, logger *slog.Logger, rec *kgo.Record) error {
 
 	event, err := decodeEvent(rec.Value)
 	if err != nil {
-		return err
+		// Некорректное сообщение: логируем и подтверждаем offset,
+		// чтобы оно не блокировало partition.
+		logger.Error("skip invalid score event",
+			"topic", rec.Topic, "partition", rec.Partition,
+			"offset", rec.Offset, "error", err)
+		return consumer.Commit(ctx, rec)
 	}
-	logger.Info("received score event",
+
+	totalScore, err := store.ApplyEvent(ctx, event)
+	if err != nil {
+		if errors.Is(err, postgres.ErrEventIDConflict) {
+			// Конфликт event_id: данные не изменяются, offset подтверждаем.
+			logger.Error("event_id conflict, skipping record",
+				"event_id", event.EventID,
+				"leaderboard_id", event.LeaderboardID,
+				"user_id", event.UserID,
+				"topic", rec.Topic, "partition", rec.Partition,
+				"offset", rec.Offset, "error", err)
+			return consumer.Commit(ctx, rec)
+		}
+		// Инфраструктурная ошибка: offset не подтверждаем, worker завершается.
+		return fmt.Errorf("apply event %s: %w", event.EventID, err)
+	}
+
+	logger.Info("processed score event",
 		"event_id", event.EventID,
 		"leaderboard_id", event.LeaderboardID,
 		"user_id", event.UserID,
 		"points", event.Points,
+		"total_score", totalScore,
 		"partition", rec.Partition,
 		"offset", rec.Offset)
 	return consumer.Commit(ctx, rec)
